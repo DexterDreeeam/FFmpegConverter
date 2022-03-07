@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpeg_converter", "FFmpeg_converter.vcxproj", "{D0129B4F-83CF-4189-8E7C-5128DBED0956}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestProj", "TestProj\TestProj.vcxproj", "{4B99FEBC-49B6-48DF-87AF-66413A866BF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -12,6 +14,8 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{D0129B4F-83CF-4189-8E7C-5128DBED0956}.Debug|x64.ActiveCfg = Debug|x64
 		{D0129B4F-83CF-4189-8E7C-5128DBED0956}.Debug|x64.Build.0 = Debug|x64
+		{4B99FEBC-49B6-48DF-87AF-66413A866BF2}.Debug|x64.ActiveCfg = Debug|x64
+		{4B99FEBC-49B6-48DF-87AF-66413A866BF2}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
