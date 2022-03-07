@@ -30,7 +30,7 @@ public:
 
     virtual ~Decoder() = default;
 
-    virtual u32 Input(const void* src, u32 len) = 0;
+    virtual s32 Input(void* src, u32 len) = 0;
 
     virtual bool Output(void* mem) = 0;
 
@@ -69,25 +69,32 @@ public:
         }
     }
 
-    virtual u32 Input(const void* src, u32 len) override
+    virtual s32 Input(void* src, u32 len) override
     {
         if (!src || len == 0)
         {
-            return 0;
+            return -1;
         }
+
+        u8* pSrc = (u8*)src;
+        memset(pSrc + len, 0, AV_INPUT_BUFFER_PADDING_SIZE);
 
         s32 input_len = av_parser_parse2(
             _parser, _codec_ctx, &_pkt->data, &_pkt->size,
-            (const u8*)src, len, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+            pSrc, len, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
 
-        if (input_len <= 0)
+        if (input_len < 0)
         {
-            return 0;
+            // if input_len == 0, it doesn't mean there is no packet
+            return -1;
         }
 
         if (_pkt->size > 0)
         {
-            avcodec_send_packet(_codec_ctx, _pkt);
+            if (avcodec_send_packet(_codec_ctx, _pkt) < 0)
+            {
+                return -1;
+            }
         }
         return input_len;
     }
@@ -117,6 +124,16 @@ public:
             memcpy(pMem, _frame->data[0] + r * _frame->linesize[0], _frame->width);
             pMem += _frame->width;
         }
+        for (s32 r = 0; r < _frame->height / 2; ++r)
+        {
+            for (s32 c = 0; c < _frame->width / 2; ++c)
+            {
+                *pMem = _frame->data[1][r * _frame->linesize[1] + c];
+                ++pMem;
+                *pMem = _frame->data[2][r * _frame->linesize[2] + c];
+                ++pMem;
+            }
+        }
         return true;
     }
 
@@ -133,7 +150,7 @@ public:
         }
         info.width = _frame->width;
         info.height = _frame->height;
-        info.size = _codec_ctx->frame_size;
+        info.size = _frame->width * _frame->height * 3 / 2;
         info.fps = (float)_codec_ctx->framerate.num / (float)_codec_ctx->framerate.den;
         return info;
     }
@@ -169,7 +186,6 @@ protected:
         {
             return false;
         }
-        //_codec_ctx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
 
         if (avcodec_open2(_codec_ctx, _codec, nullptr) < 0)
         {
@@ -196,7 +212,7 @@ private:
     AVCodecContext* _codec_ctx;
     AVPacket* _pkt;
     AVFrame* _frame;
-    s64              _pts;
+    s64 _pts;
 };
 
 ref<Decoder> Decoder::Build(const DecoderDesc& desc)

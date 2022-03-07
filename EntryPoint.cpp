@@ -15,18 +15,31 @@ void tcp_h264_to_yuv420p()
     auto decoder = ffc::Decoder::Build(desc);
     auto receiver = Es::Tcp::Receiver::Build(10086);
     auto client = receiver->WaitClient();
+
+    int buf_start = 0;
+    int buf_end = 0;
     while (1)
     {
-        int receive_len = receiver->Read(client, buf);
-        if (receive_len <= 0)
+        if (buf_start == buf_end)
+        {
+            buf_start = 0;
+            buf_end = 0;
+        }
+        int recv_len = receiver->Read(client, buf + buf_end);
+        if (recv_len <= 0)
         {
             break;
         }
-        fwrite(buf, 1, receive_len, f_h264);
-        int decode_len = 0;
-        while (decode_len < receive_len)
+        fwrite(buf + buf_end, 1, recv_len, f_h264);
+        buf_end += recv_len;
+        while (buf_start < buf_end)
         {
-            decode_len += decoder->Input(buf + decode_len, receive_len);
+            int decode_len = decoder->Input(buf + buf_start, buf_end - buf_start);
+            if (decode_len <= 0)
+            {
+                break;
+            }
+            buf_start += decode_len;
             while (decoder->Output(out))
             {
                 auto info = decoder->GetInfo();
@@ -36,6 +49,8 @@ void tcp_h264_to_yuv420p()
     }
     fclose(f_h264);
     fclose(f_420p);
+    delete[] buf;
+    delete[] out;
 }
 
 void local_h264_to_yuv420p()

@@ -142,7 +142,7 @@ protected:
 
     virtual bool Init(const EncoderDesc& desc) override
     {
-        _codec = avcodec_find_encoder_by_name("h264_mf");
+        _codec = avcodec_find_encoder_by_name("libx264");
         if (!_codec)
         {
             return false;
@@ -153,7 +153,7 @@ protected:
         {
             return false;
         }
-        _codec_ctx->bit_rate = 1024 * desc.kbps;
+        _codec_ctx->bit_rate = 1024 * (s64)desc.kbps;
         _codec_ctx->width = desc.width;
         _codec_ctx->height = desc.height;
         _codec_ctx->time_base = AVRational(1, (int)desc.fps);
