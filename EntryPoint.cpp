@@ -1,87 +1,78 @@
 
+#define _CRT_SECURE_NO_WARNINGS
+#include "../ExSocket/ex_socket.hpp"
 #include "converter.hpp"
 
-void yuv420p_to_h264()
+void tcp_h264_to_yuv420p()
 {
-    char buf[64];
-    auto* f = fopen("./test.h264", "wb+");
-    int idx = 0;
-
-    ffc::EncoderDesc desc = {};
-    desc.type = ffc::YUV_420P_to_H264;
-    desc.kbps = 2000;
-    desc.width = 640;
-    desc.height = 480;
-    desc.fps = 25;
-
-    auto encoder = ffc::Encoder::Build(desc);
-    while (1)
-    {
-        if (idx < 200)
-        {
-            encoder->Input(buf);
-        }
-        else if (idx == 200)
-        {
-            encoder->Input(nullptr);
-        }
-
-        auto out = encoder->Output();
-        if (out.first == 0 || out.second == nullptr)
-        {
-            if (idx < 200)
-            {
-                continue;
-            }
-            break;
-        }
-        fwrite(out.second, 1, out.first, f);
-        ++idx;
-    }
-    fclose(f);
-}
-
-void h264_to_yuv420p()
-{
-    const int buffer_size = 2048;
-    char* buf = new char[buffer_size + AV_INPUT_BUFFER_PADDING_SIZE];
-    char* output_buf = new char[1024 * 1024 * 4];
-    auto* f_in = fopen("./test.h264", "rb");
-    auto* f_out = fopen("./test.420p", "wb+");
+    char* buf = new char[1024 * 1024 * 64];
+    char* out = new char[1024 * 1024 * 64];
+    auto* f_h264 = fopen("./test.h264", "wb+");
+    auto* f_420p = fopen("./test.420p", "wb+");
 
     ffc::DecoderDesc desc = {};
     desc.type = ffc::H264_to_YUV_420P;
-
     auto decoder = ffc::Decoder::Build(desc);
-
-    while (!feof(f_in))
+    auto receiver = Es::Tcp::Receiver::Build(10086);
+    auto client = receiver->WaitClient();
+    while (1)
     {
-        int file_read_len = fread(buf, 1, buffer_size, f_in);
-        if (!file_read_len)
+        int receive_len = receiver->Read(client, buf);
+        if (receive_len <= 0)
         {
             break;
         }
-        int decoder_read_len = 0;
-        while (decoder_read_len < file_read_len)
+        fwrite(buf, 1, receive_len, f_h264);
+        int decode_len = 0;
+        while (decode_len < receive_len)
         {
-            decoder_read_len += decoder->Input(buf + decoder_read_len, file_read_len - decoder_read_len);
-            while (decoder->Output(output_buf))
+            decode_len += decoder->Input(buf + decode_len, receive_len);
+            while (decoder->Output(out))
             {
-                int size = decoder->GetInfo().width * decoder->GetInfo().height * 3 / 2;
-                fwrite(output_buf, 1, size, f_out);
+                auto info = decoder->GetInfo();
+                fwrite(out, 1, info.size, f_420p);
             }
         }
     }
+    fclose(f_h264);
+    fclose(f_420p);
+}
 
-    delete[] buf;
-    delete[] output_buf;
-    fclose(f_in);
-    fclose(f_out);
+void local_h264_to_yuv420p()
+{
+    char* buf = new char[1024 * 1024 * 64];
+    char* out = new char[1024 * 1024 * 64];
+    auto* f_h264 = fopen("./test.h264", "rb");
+    auto* f_420p = fopen("./test.420p", "wb+");
+
+    ffc::DecoderDesc desc = {};
+    desc.type = ffc::H264_to_YUV_420P;
+    auto decoder = ffc::Decoder::Build(desc);
+    while (1)
+    {
+        int read_len = (int)fread(buf, 1, 1024 * 512, f_h264);
+        if (read_len <= 0)
+        {
+            break;
+        }
+        int decode_len = 0;
+        while (decode_len < read_len)
+        {
+            decode_len += decoder->Input(buf + decode_len, read_len);
+            while (decoder->Output(out))
+            {
+                auto info = decoder->GetInfo();
+                fwrite(out, 1, info.size, f_420p);
+            }
+        }
+    }
+    fclose(f_h264);
+    fclose(f_420p);
 }
 
 int main()
 {
-    //yuv420p_to_h264();
-    h264_to_yuv420p();
+    tcp_h264_to_yuv420p();
+    //local_h264_to_yuv420p();
     return 0;
 }

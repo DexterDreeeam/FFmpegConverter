@@ -74,12 +74,14 @@ public:
         }
 
         _frame->pts = _pts;
+
+        const u8* pSrc = (const u8*)src;
         /* Y */
         for (s32 y = 0; y < _codec_ctx->height; y++)
         {
             for (s32 x = 0; x < _codec_ctx->width; x++)
             {
-                _frame->data[0][y * _frame->linesize[0] + x] = x + y + _pts * 3;
+                _frame->data[0][y * _frame->linesize[0] + x] = *pSrc++;
             }
         }
         /* Cb and Cr */
@@ -87,8 +89,8 @@ public:
         {
             for (s32 x = 0; x < _codec_ctx->width / 2; x++)
             {
-                _frame->data[1][y * _frame->linesize[1] + x] = 128 + y + _pts * 2;
-                _frame->data[2][y * _frame->linesize[2] + x] = 64 + x + _pts * 5;
+                _frame->data[1][y * _frame->linesize[1] + x] = *pSrc++;
+                _frame->data[2][y * _frame->linesize[2] + x] = *pSrc++;
             }
         }
 
@@ -100,6 +102,7 @@ public:
         return true;
     }
 
+    // output_size : output_data
     virtual pair<u32, const void*> Output() override
     {
         pair<u32, const void*> ret = { 0, nullptr };

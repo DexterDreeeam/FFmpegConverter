@@ -98,7 +98,8 @@ public:
         {
             return false;
         }
-        if (avcodec_receive_frame(_codec_ctx, _frame) < 0)
+        int val = avcodec_receive_frame(_codec_ctx, _frame);
+        if (val < 0)
         {
             return false;
         }
@@ -168,7 +169,7 @@ protected:
         {
             return false;
         }
-        _codec_ctx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+        //_codec_ctx->pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
 
         if (avcodec_open2(_codec_ctx, _codec, nullptr) < 0)
         {
