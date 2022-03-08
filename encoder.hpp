@@ -8,6 +8,7 @@ namespace ffc
 enum _EncoderType
 {
     YUV_420P_to_H264,
+    YUV_NV12_to_H264,
 };
 
 struct EncoderDesc
@@ -36,12 +37,10 @@ protected:
     virtual bool Init(const EncoderDesc& desc) = 0;
 };
 
-class Encoder_420P_H264 : public Encoder
+class Encoder_YUV_H264 : public Encoder
 {
-    friend class Encoder;
-
 public:
-    virtual ~Encoder_420P_H264() override
+    virtual ~Encoder_YUV_H264() override
     {
         if (_frame)
         {
@@ -73,32 +72,12 @@ public:
             return false;
         }
 
-        _frame->pts = _pts;
-
-        const u8* pSrc = (const u8*)src;
-        /* Y */
-        for (s32 y = 0; y < _codec_ctx->height; y++)
-        {
-            for (s32 x = 0; x < _codec_ctx->width; x++)
-            {
-                _frame->data[0][y * _frame->linesize[0] + x] = *pSrc++;
-            }
-        }
-        /* Cb and Cr */
-        for (s32 y = 0; y < _codec_ctx->height / 2; y++)
-        {
-            for (s32 x = 0; x < _codec_ctx->width / 2; x++)
-            {
-                _frame->data[1][y * _frame->linesize[1] + x] = *pSrc++;
-                _frame->data[2][y * _frame->linesize[2] + x] = *pSrc++;
-            }
-        }
+        UpdateFrameYuv(src);
 
         if (avcodec_send_frame(_codec_ctx, _frame) < 0)
         {
             return false;
         }
-        ++_pts;
         return true;
     }
 
@@ -130,7 +109,7 @@ public:
     }
 
 protected:
-    Encoder_420P_H264() :
+    Encoder_YUV_H264() :
         Encoder(),
         _codec(nullptr),
         _codec_ctx(nullptr),
@@ -197,12 +176,80 @@ protected:
         return true;
     }
 
-private:
+    virtual void UpdateFrameYuv(const void* src) = 0;
+
+protected:
     const AVCodec*   _codec;
     AVCodecContext*  _codec_ctx;
     AVPacket*        _pkt;
     AVFrame*         _frame;
     s64              _pts;
+};
+
+class Encoder_420P_H264 : public Encoder_YUV_H264
+{
+    friend class Encoder;
+
+public:
+    virtual ~Encoder_420P_H264() override = default;
+
+protected:
+    Encoder_420P_H264() = default;
+
+    virtual void UpdateFrameYuv(const void* src) override
+    {
+        const u8* pSrc = (const u8*)src;
+        /* Y */
+        for (s32 y = 0; y < _codec_ctx->height; y++)
+        {
+            memcpy(&_frame->data[0][y * _frame->linesize[0]], pSrc, _codec_ctx->width);
+            pSrc += _codec_ctx->width;
+        }
+        /* Cb and Cr */
+        for (s32 y = 0; y < _codec_ctx->height / 2; y++)
+        {
+            memcpy(&_frame->data[1][y * _frame->linesize[1]], pSrc, _codec_ctx->width / 2);
+            pSrc += _codec_ctx->width / 2;
+        }
+        for (s32 y = 0; y < _codec_ctx->height / 2; y++)
+        {
+            memcpy(&_frame->data[2][y * _frame->linesize[2]], pSrc, _codec_ctx->width / 2);
+            pSrc += _codec_ctx->width / 2;
+        }
+        _frame->pts = _pts++;
+    }
+};
+
+class Encoder_NV12_H264 : public Encoder_YUV_H264
+{
+    friend class Encoder;
+
+public:
+    virtual ~Encoder_NV12_H264() override = default;
+
+protected:
+    Encoder_NV12_H264() = default;
+
+    virtual void UpdateFrameYuv(const void* src) override
+    {
+        const u8* pSrc = (const u8*)src;
+        /* Y */
+        for (s32 y = 0; y < _codec_ctx->height; y++)
+        {
+            memcpy(&_frame->data[0][y * _frame->linesize[0]], pSrc, _codec_ctx->width);
+            pSrc += _codec_ctx->width;
+        }
+        /* Cb and Cr */
+        for (s32 y = 0; y < _codec_ctx->height / 2; y++)
+        {
+            for (s32 x = 0; x < _codec_ctx->width / 2; x++)
+            {
+                _frame->data[1][y * _frame->linesize[1] + x] = *pSrc++;
+                _frame->data[2][y * _frame->linesize[2] + x] = *pSrc++;
+            }
+        }
+        _frame->pts = _pts++;
+    }
 };
 
 ref<Encoder> Encoder::Build(const EncoderDesc& desc)
@@ -212,6 +259,9 @@ ref<Encoder> Encoder::Build(const EncoderDesc& desc)
     {
     case YUV_420P_to_H264:
         r = ref<Encoder>(new Encoder_420P_H264());
+        break;
+    case YUV_NV12_to_H264:
+        r = ref<Encoder>(new Encoder_NV12_H264());
         break;
     default:
         break;

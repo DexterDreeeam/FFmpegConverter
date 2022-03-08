@@ -11,7 +11,7 @@ void tcp_h264_to_yuv420p()
     auto* f_420p = fopen("./test.420p", "wb+");
 
     ffc::DecoderDesc desc = {};
-    desc.type = ffc::H264_to_YUV_420P;
+    desc.type = ffc::H264_to_YUV_NV12;
     auto decoder = ffc::Decoder::Build(desc);
     auto receiver = Es::Tcp::Receiver::Build(10086);
     auto client = receiver->WaitClient();
