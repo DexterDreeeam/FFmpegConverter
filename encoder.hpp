@@ -252,7 +252,7 @@ protected:
     }
 };
 
-ref<Encoder> Encoder::Build(const EncoderDesc& desc)
+inline ref<Encoder> Encoder::Build(const EncoderDesc& desc)
 {
     ref<Encoder> r;
     switch (desc.type)

@@ -21,6 +21,8 @@
 #pragma comment(lib, "./lib/swresample.lib")
 #pragma comment(lib, "./lib/swscale.lib")
 
+#pragma warning (disable : 4242)
+
 #define __STDC_CONSTANT_MACROS
 extern "C"
 {
@@ -56,9 +58,9 @@ namespace ffc
     template<typename T>               using list = std::list<T>;
     template<typename T>               using ref = std::shared_ptr<T>;
 
-    void yield() { std::this_thread::yield(); }
-    void sleep_ms(u32 s) { std::this_thread::sleep_for(std::chrono::milliseconds(s)); }
-    void sleep_us(u32 s) { std::this_thread::sleep_for(std::chrono::microseconds(s)); }
+    inline void yield() { std::this_thread::yield(); }
+    inline void sleep_ms(u32 s) { std::this_thread::sleep_for(std::chrono::milliseconds(s)); }
+    inline void sleep_us(u32 s) { std::this_thread::sleep_for(std::chrono::microseconds(s)); }
 
     // ================== custom ==================
     const bool print_msg = true;

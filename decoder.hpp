@@ -293,7 +293,7 @@ protected:
     }
 };
 
-ref<Decoder> Decoder::Build(const DecoderDesc& desc)
+inline ref<Decoder> Decoder::Build(const DecoderDesc& desc)
 {
     ref<Decoder> r;
     switch (desc.type)
