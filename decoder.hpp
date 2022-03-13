@@ -8,7 +8,6 @@ namespace ffc
 enum _DecoderType
 {
     H264_to_YUV_420P,
-    H264_to_YUV_420P_NV12,
     H264_to_YUV_NV12,
 };
 
@@ -81,19 +80,6 @@ public:
 
 protected:
     Decoder_H264_420P() = default;
-
-    virtual void ReadFrameYuv(void* mem) override;
-};
-
-class Decoder_H264_420P_NV12 : public Decoder_H264_YUV
-{
-public:
-    friend class Decoder;
-
-    virtual ~Decoder_H264_420P_NV12() override = default;
-
-protected:
-    Decoder_H264_420P_NV12() = default;
 
     virtual void ReadFrameYuv(void* mem) override;
 };

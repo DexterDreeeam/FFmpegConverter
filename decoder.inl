@@ -14,9 +14,6 @@ inline ref<Decoder> Decoder::Build(const DecoderDesc& desc)
     case H264_to_YUV_420P:
         r = ref<Decoder>(new Decoder_H264_420P());
         break;
-    case H264_to_YUV_420P_NV12:
-        r = ref<Decoder>(new Decoder_H264_420P_NV12());
-        break;
     case H264_to_YUV_NV12:
         r = ref<Decoder>(new Decoder_H264_NV12());
         break;
@@ -180,24 +177,6 @@ inline void Decoder_H264_420P::ReadFrameYuv(void* mem)
     {
         memcpy(pMem, &_frame->data[2][r * _frame->linesize[2]], _frame->width / 2);
         pMem += _frame->width / 2;
-    }
-}
-
-inline void Decoder_H264_420P_NV12::ReadFrameYuv(void* mem)
-{
-    char* pMem = (char*)mem;
-    for (s32 r = 0; r < _frame->height; ++r)
-    {
-        memcpy(pMem, &_frame->data[0][r * _frame->linesize[0]], _frame->width);
-        pMem += _frame->width;
-    }
-    for (s32 r = 0; r < _frame->height / 2; ++r)
-    {
-        for (s32 c = 0; c < _frame->width / 2; ++r)
-        {
-            _frame->data[1][r * _frame->linesize[1] + c] = *pMem++;
-            _frame->data[2][r * _frame->linesize[2] + c] = *pMem++;
-        }
     }
 }
 
