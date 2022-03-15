@@ -53,23 +53,28 @@ inline int Decoder_H264_YUV::Input(void* src, int len)
     }
 
     u8* pSrc = (u8*)src;
-    memset(pSrc + len, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+    memset(pSrc + len, 0, AV_INPUT_BUFFER_PADDING_SIZE * 2);
 
-    s32 input_len = av_parser_parse2(
-        _parser, _codec_ctx, &_pkt->data, &_pkt->size,
-        pSrc, len, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+    s32 input_len = 0;
+    while (input_len < len)
+    {
+        s32 in = av_parser_parse2(
+            _parser, _codec_ctx, &_pkt->data, &_pkt->size,
+            pSrc + input_len, len - input_len, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
 
-    if (input_len < 0)
-    {
-        // if input_len == 0, it doesn't mean there is no packet
-        return -1;
-    }
-    if (_pkt->size > 0)
-    {
-        if (avcodec_send_packet(_codec_ctx, _pkt) < 0)
+        if (in < 0)
         {
+            // if input_len == 0, it doesn't mean there is no packet
             return -1;
         }
+        if (_pkt->size)
+        {
+            if (avcodec_send_packet(_codec_ctx, _pkt) < 0)
+            {
+                return -1;
+            }
+        }
+        input_len += in;
     }
     return input_len;
 }
@@ -162,7 +167,7 @@ inline bool Decoder_H264_YUV::Init(const DecoderDesc& desc)
 
 inline void Decoder_H264_420P::ReadFrameYuv(void* mem)
 {
-    char* pMem = (char*)mem;
+    u8* pMem = (u8*)mem;
     for (s32 r = 0; r < _frame->height; ++r)
     {
         memcpy(pMem, &_frame->data[0][r * _frame->linesize[0]], _frame->width);
@@ -182,10 +187,10 @@ inline void Decoder_H264_420P::ReadFrameYuv(void* mem)
 
 inline void Decoder_H264_NV12::ReadFrameYuv(void* mem)
 {
-    char* pMem = (char*)mem;
+    u8* pMem = (u8*)mem;
     for (s32 r = 0; r < _frame->height; ++r)
     {
-        memcpy(pMem, &_frame->data[0][r * _frame->linesize[0]], _frame->width);
+        memcpy(pMem, _frame->data[0] + (long long)r * (long long)_frame->linesize[0], _frame->width);
         pMem += _frame->width;
     }
     for (s32 r = 0; r < _frame->height / 2; ++r)
